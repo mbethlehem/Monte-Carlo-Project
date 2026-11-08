@@ -1,0 +1,753 @@
+---
+title: "002_rapport_Messelu_JIN"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-11-18"
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+set.seed(123)
+a = 0.2
+mu_1 = 0
+mu_2 =1 
+s_1 = 3
+s_2 = 1
+Z = 1-a
+
+#copy and paste pdf,CDF, inverse_F that were defined in the first project
+
+f <- function(a, mu_1, mu_2, s_1, s_2, x) {
+  C = 1 / (1 - a)
+  f1 = (1 / (2 * pi * (s_1^2))^0.5) * exp(-0.5 * ((x - mu_1)^2) / (s_1^2))
+  f2 = (1 / (2 * pi * (s_2^2))^0.5) * exp(-0.5 * ((x - mu_2)^2) / (s_2^2))
+  return(C * (f1 - a * f2))
+}
+
+F <- function(a, mu_1, mu_2, s_1, s_2, x) {
+  F1 <- pnorm(x, mean = mu_1, sd = s_1) 
+  F2 <- pnorm(x, mean = mu_2, sd = s_2) 
+  return((F1 - a * F2) / (1 - a))
+}
+
+
+inverse_F<-function(u,a, mu_1, mu_2, s_1, s_2,eps)
+{
+  if (u>=1 || u<=0) {stop("Error message: the value of CDF should be in ]0,1[")}
+  
+  x1 = -1 #initialize two values of x
+  x2 = 1
+  i=1
+  
+  #The while loop expands the bounds (x1 and x2) until F(x1) < u < F(x2),
+  while((F(a, mu_1, mu_2, s_1, s_2, x1)-u)>0 || (F(a, mu_1, mu_2, s_1, s_2, x2)-u)<0){
+    if(F(a, mu_1, mu_2, s_1, s_2, x1)-u>0){
+       x1 <- x1*(2^i) # Expand x1 in the negative direction
+    }
+    if(F(a, mu_1, mu_2, s_1, s_2, x2)-u<0){
+       x2 <- x2*(2^i)  # Expand x2 in the positive direction
+    }
+    i <- i+1
+  }
+    
+  x = x1 
+  
+  while(abs(x1-x2)>eps){
+    x = (x1+x2)/2  # Calculate midpoint
+    if((F(a, mu_1, mu_2, s_1, s_2, x)-u)<0){
+      x1 <-x # Narrow down the interval
+    }else{
+      x2<-x
+    }
+  }
+  return(x)
+   
+}
+```
+
+## Question 9: Describe an accept-reject algorithm using g and Partition
+
+To implement the accept-reject algorithm, we first need to identify a
+candidate density, denoted as $h$. This density $h$ is obtained by
+normalizing $g$.
+
+Let $h = Cg$ where $C\in \mathbb R $ such that $h$ is a density.
+
+$$
+C \int_{\mathbb{R}} g(x) dx = \frac{C}{Z} \left( \int_{D_0} f_1(x) dx + \sum_{i=1}^{k} \left( \sup_{D_i} f_i - a \inf_{D_i} f_2 \right) \lambda(D_i) \right) = 1,
+$$
+
+where $Z = 1 - a$ and $\lambda$ is the Lebesgue measure.
+
+Thus:
+
+$$
+C = \frac{Z}{\int_{D_0} f_1(x) dx + \sum_{i=1}^{k} \left( \sup_{D_i} f_i - a \inf_{D_i} f_2 \right) \lambda(D_i)}.
+$$ 
+
+We also denote $Ig$ the integral g. We have $Ig$ = \frac{1}{C}
+
+Then we can take the least upper bound $\widetilde{M}$ of $\frac{f}{g}$
+which is:
+
+$$
+\widetilde{M} = \max \left( \sup_{D_0} (1 - a\frac{f_2}{f_1}), \sup_{D_1} \frac{f_1 - a f_2}{\sup_{D_1}f_1-a\inf_{D_1}f_2},..., \sup_{D_k} \frac{f_1 - a f_2}{\sup_{D_k}f_1-a\inf_{D_k}f_2} ) \right) = 1.
+$$ 
+
+Now we take $M$ as the least upper bound of $\frac{f}{h}$. We have 
+$$
+M = \sup \frac{f}{h} = \sup \frac{f}{Cg} = \frac{1}{C} \sup \frac{f}{g} = \frac{1}{C} \widetilde{M} =\frac{1}{C} 
+$$ 
+because $\widetilde{M}$ is equal to 1.
+
+#### Algorithm Steps
+
+1.  Simulate $Y \sim h$, $U \sim \mathcal{U}[0,1]$.
+2.  Accept $X = Y$ if: $$
+    U \leq \frac{f(Y)}{Mh(Y)} = \frac{f(Y)}{g(Y)}.
+    $$
+3.  Otherwise, return to step 1.
+
+The theoretical acceptance rate is: 
+$$
+\frac{1}{M} = C = \frac{1}{Ig}.
+$$ 
+## Question 10: prove the existence of Partition
+
+
+Let $\delta \in [0, 1[$. Define $P_n$:
+
+$$
+D_0 = ]-\infty, -n[ \cup ]n, +\infty[,
+$$
+
+and
+
+$$
+D_k = \left[-n + \frac{k - 1}{n}, -n +  \frac{k}{n} \right] \quad \text{for } k = 1, \ldots, 2n^2.
+$$
+
+When $n \to \infty$,
+
+$$
+\int_{D_0} f_1(x) dx \to 0
+$$ 
+
+$$
+\sum_{i=1}^{k} \left( \sup_{D_i} f_i - a \inf_{D_i} f_2 \right) \lambda(D_i) 
+$$ 
+is Riemman sum whose limit converges to
+
+$\int_{\mathbb{R}} f_1 - a \int_{\mathbb{R}} f_2$
+
+we have the acceptance rate:
+
+$$
+C \to \frac{1 - a}{\int_{\mathbb{R}} f_1 - a \int_{\mathbb{R}} f_2} = \frac{1 - a}{1 - a} = 1.
+$$
+
+Therefore, there exists $N \in \mathbb{N}$ such that:
+
+$$
+\forall n \geq N, \left| C - 1 \right| < \varepsilon.
+$$
+
+We take $\varepsilon = 1 - \delta$. Hence:
+
+$$
+C > \delta.
+$$
+
+Thus:
+
+$$
+\frac{1}{M} > \delta.
+$$
+
+#### Conclusion
+
+We have shown the existence of $N \in \mathbb{N}$ that depends on
+$\delta$ such that for any $n \geq N$, the acceptance rate of $P_n$ is
+greater than $\delta$.
+
+## Question 11: stratified(n)
+
+```{r}
+
+#define a Partition of R by using a list of a, b, k to represent: Do = ]-inf,a]U]b,inf[, Di=]a+(b-a)/k*(i-1), a+(b-a)/k*i], i = 1,...,k
+P<-function(a,b,k) 
+{
+   return(list(a,b,as.integer(k)))
+}
+
+#define a function taking extremes of interval and mean of Gaussian density, returning a maximizer of the density on the interval 
+inter_argmax<-function(a1,b1,mu){
+  if (mu <= a1){
+    return (a1)
+  }else if (mu>=b1){
+    return (b1)
+  }else {
+    return (mu)
+  }
+}
+#define a function taking extremes of interval and mean of Gaussian density, returning a minimizer of the density on the interval 
+inter_argmin<-function(a1,b1,mu){
+  if (abs(a1-mu)>=abs(b1-mu)){
+    return (a1)
+  }else{
+    return (b1)
+  }
+}
+
+
+#define a function taking partition p as argument to calculate Integral of g
+Integral_g<-function(p)
+{ 
+  b = p[[1]]
+  c = p[[2]]
+  k = p[[3]]
+  res = 0
+  partition_points = seq(b,c,length.out = k+1)
+  linear_heights = numeric(k+1) 
+  linear_heights[1] = pnorm(b,mu_1,s_1)
+  l = (c-b)/k
+  
+  for (i in (1:k)){
+    a1 = b + l*(i-1)
+    b1 = b + l*i
+    sup = dnorm(inter_argmax(a1,b1,mu_1),mu_1,s_1)
+    inf = dnorm(inter_argmin(a1,b1,mu_2),mu_2,s_2)
+    linear_heights[i+1] = linear_heights[i] + (sup - a*inf)*l
+  }
+  res = (linear_heights[k+1]+1-pnorm(c,mu_1,s_1))
+  return (list(Ig = res/Z,pp = partition_points, lh = linear_heights/res))
+}
+
+#define a Partition to be used in the function stratified to achieve acceptance rate bigger than 0.9 
+P0 = P(-1,3,160) # provide a partition 
+res_Ig = Integral_g(P0)
+Ig = res_Ig$Ig #Intergral of g 
+pp = res_Ig$pp #Partition points 
+lh = res_Ig$lh #Linear points of F_h_inverse on the extremes of intervals of the partition 
+
+
+#define inverse CDF of h 
+F_h_inverse<-function(p,u){
+  b = p[[1]]
+  c = p[[2]]
+  k = p[[3]]
+  if (u<=lh[1]){
+    return (qnorm(u*Z*Ig,mu_1,s_1))
+  }else if (u>=lh[k+1]){
+    return(qnorm(1-Z*Ig*(1-u),mu_1,s_1))
+  }else{
+    i = findInterval(u,lh)
+    return ((u-lh[i])*(pp[i+1]-pp[i])/(lh[i+1]-lh[i])+pp[i]) #On each interval Di, i=1,..,k, inverse CDF of h is linear
+    }
+}
+
+#graphically check that F_h_inverse is correct
+U=seq(0.01,0.99,length.out=100)
+Y=sapply(U,function(i) F_h_inverse(P0,i))
+plot(Y,U,main="F_h_inverse")
+
+#define g 
+g<-function(x,p){
+  b = p[[1]]
+  c = p[[2]]
+  
+  if (x <= b || x >= c){
+    return (dnorm(x,mu_1,s_1)/Z)
+  }else{
+    i = findInterval(x,pp)
+    sup = dnorm(inter_argmax(pp[i],pp[i+1],mu_1),mu_1,s_1)
+    inf = dnorm(inter_argmin(pp[i],pp[i+1],mu_2),mu_2,s_2)
+    return ((sup-a*inf)/Z)
+  }
+}
+
+#graphically check that g is correct
+X1=seq(-5,5,length.out=100)
+Y=sapply(X1,function(i) g(i,P0))
+plot(X1,Y,main="g")
+
+
+#define a function that generates one sample X ~ f
+accept_reject_once<-function(p){
+  u = runif(1)
+  y = F_h_inverse(p,runif(1)) #generates one sample Y ~ h using inverse function method
+  i = 1 
+  while(u>f(a, mu_1, mu_2, s_1, s_2, y)/g(y,p)){
+    u = runif(1)
+    y = F_h_inverse(p,runif(1)) 
+    i = i + 1 
+  }
+  return (list(rv=y,nt=i))
+}
+
+#define a function generate n sample of f using accept_reject_once function n times
+stratified<-function(n){
+  X = numeric(n)
+  s = 0 
+  for (j in (1:n)){
+    res = accept_reject_once(P0)
+    X[j] = res$rv
+    s = s + res$nt
+  }
+  return (list(X_sam = X, accep_rate = n/s))
+}
+```
+
+#### Test
+
+```{r}
+
+result = stratified(10000)
+
+accep_rate = result$accep_rate
+X = result$X_sam
+theore_rate = 1/Ig
+print(paste("Empirical acceptance rate:", accep_rate, "Theoretical rate",theore_rate))
+
+
+hist(X,freq=FALSE, col='green', breaks = 100, ylim = c(0,0.2),
+     main = "f from accept_reject method", xlab="x",ylab="y")
+x2<-seq(-10, 10,length.out = 100)
+y2<-f(a, mu_1, mu_2, s_1, s_2, x2)
+lines(x2,y2, col='red')
+legend("topright", legend = c("Empirical density f with accept-reject method",
+                              "Theoretical density of f"),
+       col = c("green", "red"), lwd =2, cex= 0.7, bty="n")
+```
+
+The empirical acceptance rate of 0.986 is very close to the theoretical
+rate of 0.985 for a given partition: 
+$$
+D_0 =  ]-\infty, -1[ \cup ]3, +\infty[,
+$$ 
+$$
+D_i = ]-1+\frac{1}{40}(i-1), -1+\frac{1}{40}i], i = 1,...,160
+$$
+## Question 12: stratified(n,delta)
+
+#### Constuct a Parition for a given delta
+
+Let $\delta < \frac{1}{Ig}$. We have
+$\left|Ig-1|<\frac{1}{\delta}-1\right|$ $(*)$. We denote
+$\epsilon =  \frac{2}{3}(\frac{1}{\delta}-1)$. To achieve $(*)$, by
+error analysis, the $D_0$ of a Partition could be:
+
+
+$$
+D_0 = \left] -\infty, q_{\epsilon/4} \right] \cup \left] q_{1 - \epsilon/4}, +\infty \right[
+$$
+
+where $q_{\epsilon/4}$ and $q_{1 - \epsilon/4}$ is the quantile of
+$N(\mu_2,\sigma_2^2)$ of order $\epsilon/4$ and $1-\epsilon/4$. For the
+intervals $D_i$, $i = 1,..,k$, we consider equal lengths denoted as $l$
+to simplify the problem. In this case, by error analysis, $l$ needs to
+satisfy two conditions:
+
+$$
+l\leq \frac{\epsilon \sigma_1^2}{\max(|q_{\epsilon} - \mu_1|, |q_{1 - \epsilon} - \mu_1|)}
+$$
+
+and
+
+$$
+l\leq \frac{\epsilon \sigma_2^2}{2\max(|q_{\epsilon} - \mu_2|, |q_{1 - \epsilon} - \mu_2|)}
+$$
+
+We take $l$ as
+$$
+\min(\frac{\epsilon \sigma_1^2}{\max(|q_{\epsilon} - \mu_1|, |q_{1 - \epsilon} - \mu_1|)}, \frac{\epsilon \sigma_2^2}{2\max(|q_{\epsilon} - \mu_2|, |q_{1 - \epsilon} - \mu_2|)})
+$$
+
+```{r}
+#define a function to construct a partition for a given delta
+Part_delta<-function(delta){
+  eps = (1/delta-1)*2/3
+  if(eps>1) {eps = 1} #ensure the input of qnorm is valid
+  b = qnorm(eps/4,mu_2,s_2)
+  c = qnorm(1-eps/4,mu_2,s_2)
+  l = min((eps*s_1^2)/max(abs(b-mu_1),abs(c-mu_1)),(0.5*eps*s_2^2)/max(abs(b-mu_2),abs(c-mu_2)))
+  
+  return (P(b,c,ceiling((c-b)/l)))
+}
+
+#calculate Ig, pp, lh for a given partition constructed by delta
+#call stratified(n)
+oldstratified = stratified
+
+stratified<-function(n,delta){
+  P0 <<- Part_delta(delta)
+  res_Ig = Integral_g(P0)
+  Ig <<- res_Ig$Ig
+  pp <<- res_Ig$pp
+  lh <<- res_Ig$lh
+  res = oldstratified(n)
+  return (list(res = res,Par = P0,Ig=Ig))
+}
+
+```
+
+
+```{r}
+delta = 0.9
+result = stratified(5000,delta)
+Ig_delta = result$Ig
+
+PP = result$Par
+print(paste("The Partition for delta =", delta, "is:",PP))
+accep_rate_delta = result$res$accep_rate
+X2 = result$res$X_sam
+theore_rate_delta = 1/Ig_delta
+
+print(paste("For a given delta =",delta,"the empirical acceptance rate is", accep_rate_delta, "and the theoretical rate is",theore_rate_delta))
+
+hist(X2,freq=FALSE, col='green', breaks = 100, ylim = c(0,0.2),
+     main = "f from accept_reject method for delta = 0.9", xlab="x",ylab="y")
+x3<-seq(-10, 10,length.out = 100)
+y3<-f(a, mu_1, mu_2, s_1, s_2, x2)
+lines(x3,y3, col='red')
+legend("topright", legend = c("Empirical density f with accept-reject method",
+                              "Theoretical density of f"),
+       col = c("green", "red"), lwd =2, cex= 0.7, bty="n")
+
+```
+
+The empirical acceptance rate is 0.985 which is bigger than the given
+$\delta$ = 0.9.
+
+The partition is: 
+$$
+D_0 = ]-\infty,-1.085]\cup]3.085,\infty[, 
+D_i=]-1.085+4/235*(i-1), -1.085+4/235*i], i = 1,...,235
+$$
+## Question 13: Monte Carlo Fn estimator 
+
+$$
+F_X(x)= P(X \leq x) = \mathbb{E}[1_{X \leq x}] 
+$$
+The Monte Carlo estimator is: 
+
+$$
+\frac{1}{n} \sum_{i=1}^n 1_{X_i \leq x}
+$$
+## Question 14: strong consistency of Fn(x)
+
+$(1_{X_i \leq x})_{i=1}^n $ are i.i.d variables
+
+$$\forall i \in \{1, \dots, n\}, \quad 1_{X_i \leq x} \sim \text{Ber}(p), \text{ where } p = P(X \leq x) = F_X(x)$$
+
+The law of large numbers gives that 
+
+$$F_n(x) = \frac{1}{n} \sum_{i=1}^n 1_{X_i \leq x} \xrightarrow{\text{a.s.}}_{n \to \infty} \mathbb{E}[1_{X_i \leq x}] = F_X(x)$$
+
+So F_n(x) is a strong consistent estimator of $F_X(x)$. 
+
+
+## Question 15 : empirical cdf(x,Xn)
+
+```{r}
+empirical_cdf<-function(x, Xn){ # Xn is a random vector of X1, ..., Xn 
+  count<-sum(Xn <= x)
+  n = length(Xn)
+  return (count/n)
+}
+```
+#### test
+```{r}
+X_vec<-seq(-10,10,length.out=100)
+N <- c(10, 100, 1000, 10000, 100000)
+delta = 0.9 
+
+F_x = sapply(X_vec,function(i) F(a, mu_1, mu_2, s_1, s_2, i) )
+
+for (n in N){
+  results = stratified(n,delta)
+  X_n = results$res$X_sam
+  Y = sapply(X_vec,function(i) empirical_cdf(i,X_n))
+  #if (n == N[1]){
+    plot(X_vec,Y,type="l",col="green", main=paste("Fn and Fx when n is",n))
+    lines(X_vec,F_x,col="red")
+    legend("topright", legend = c("Fn","Fx"), col = c("green", "red"), lwd =2, cex= 0.7, bty="n")
+}
+```
+
+From these grapes, we can observe the strong consistency of $F_n$ when n is increasing. 
+
+## Question 16 
+
+Let $(Y_i)_{i=1}^n$ be $n$ i.i.d square integrable random variables.
+
+The central limit theorem states that:
+
+$$
+\sqrt{n} \left( \overline{Y_n} - \mathbb{E}[Y_i] \right) \xrightarrow{d}_{n \to \infty} \mathcal{N}(0, \text{Var}(Y_1))
+$$
+Here we apply the CLT to $Y_i = 1_{X_i \leq x}$.
+
+We know that $1_{X_i \leq x} \overset{\text{iid}}{\sim} \text{Ber}(p)$, where $p = F_X(x)$.
+
+$$
+\sqrt{n} \left( \frac{1}{n} \sum_{i=1}^n 1_{X_i \leq x} - \mathbb{E}[1_{X_i \leq x}] \right) \xrightarrow{D}_{n \to \infty} \mathcal{N}(0, \text{Var}(1_{X_i \leq x}))
+$$
+
+$$
+\Rightarrow \quad \sqrt{n} \left( F_n(x) - F_X(x) \right) \xrightarrow{D}_{n \to \infty} \mathcal{N}(0, p(1-p))
+$$
+
+$$
+\Rightarrow \quad \sqrt{n} \frac{F_n(x) - F_X(x)}{\sqrt{p(1-p)}} \xrightarrow{D}_{n \to \infty} \mathcal{N}(0, 1)
+$$
+
+$$
+\text{CI}_{95\%} = \left[ F_n(x) \pm \frac{q_{0.975} \cdot \sqrt{F_n(x) (1 - F_n(x))}}{\sqrt{n}} \right]
+$$
+where $q_{0.975}$ is the quantile of $N(0,1)$ of order 0.975. 
+
+
+## Question 17: 95% CI of F(x) for a given x
+```{r}
+q<- qnorm(0.975)
+
+#we denote eps the absolute precision of Fn(x) 
+simu_IC<-function(x,eps_rel){
+  Fx <-F(a, mu_1, mu_2, s_1, s_2, x)
+  eps = eps_rel*Fx
+  return (ceiling((Fx-Fx^2)/((eps^2)/(q^2))))
+}
+
+
+
+```
+#### test 
+```{r}
+eps_rel = 0.01
+print(paste("When x = 1, the number of simulation needed to have a 95% IC is", simu_IC(1,eps_rel)))
+
+print(paste("When x = -15, the number of simulation needed to have a 95% IC is", simu_IC(-15,eps_rel)))
+```
+We observe that: 
+At $x = 1$, the CDF $F_X(x)$ is moderate, so $n$ is reasonable.  
+At $x = -15$, the CDF $F_X(x)$ is extremely small, so $n$ becomes extremely large. This reflects the difficulty of estimating extreme tail probabilities accurately with the Monte Carlo method.
+
+
+
+## Question 18: Qn(u)
+
+Let $u \in (0, 1)$. Let $n\in \mathbb N$. We have:
+
+$$
+u \leq F_n(x) = \frac{1}{n} \sum_{i=1}^n \mathbb{1}_{X_i \leq x}.
+$$
+
+So, we can express:
+$$
+un \leq \sum_{i=1}^n \mathbb{1}_{X_i \leq x}.
+$$
+
+We order $(X_i)_{i=1}^n$ in ascending order to obtain a new sequence:
+$$
+(X_{(1)}, X_{(2)}, \dots, X_{(n)}).
+$$
+
+The quantile function $Q_n(u)$ is defined as:
+$$
+Q_n(u) =
+\begin{cases} 
+X_{(un)}, & \text{if } un \text{ is an integer,} \\
+X_{\lceil un \rceil}, & \text{otherwise.}
+\end{cases}
+$$
+
+Where:
+$$
+\lceil un \rceil := \min \{k \in \mathbb{Z} \mid k \geq un \}.
+$$
+
+## Question 19: TCL for Qn(u)
+
+We have:
+$$
+\sum_{j=1}^n Y_{j,n} = n F_n(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}).
+$$
+
+Then we have:
+- Expectation:
+  $$
+  \mathbb{E}[Y_{j,n}] = P\left(X_j \leq Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right) = F_X\left(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right).
+  $$
+
+
+- Variance:
+  $$
+  \text{Var}(Y_{j,n}) = F_X\left(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right) \left( 1 - F_X\left(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right) \right).
+  $$
+
+- $S_n$:
+  $$
+  s_n = n \sum_{j=1}^n \sigma^2_{j,n} = \sqrt{n} \text{Var}(Y_{j,n}).
+  $$
+
+
+We have:
+$$
+\frac{\sum_{j=1}^n Y_{j,n} - n \mathbb{E}[Y_{j,n}]}{s_n} =
+\frac{\sqrt{n} \left( F_n(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}) - F_X(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}) \right)}{\sqrt{F_X\left(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right) \left(1 - F_X\left(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right)\right)}}.
+$$
+
+Let:
+$$
+\sigma_{n}= \frac{\sqrt{u(1-u)}}{f(Q(u))}.
+$$
+
+We have:
+$$
+F_X\left(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right) = 
+F_X(Q(u)) + f_X(Q(u)) \cdot t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))} + o\left(\frac{1}{n}\right), \quad \text{(applying Taylor development)}.
+$$
+
+This simplifies to:
+$$
+= u + t \frac{\sqrt{u(1-u)}}{\sqrt{n}} + o\left(\frac{1}{n}\right).
+$$
+
+We also have:
+$$
+\frac{s_n}{n} = \sqrt{\frac{n(u - u^2 + O(1/\sqrt{n}))}{n^2} }= \sqrt{\frac{u - u^2}{n} + O\left(\frac{1}{n^{3/2}}\right)}.
+$$
+
+Thus, it can be rewritten as:
+$$
+\frac{\sum_{j=1}^n Y_{j,n} - n \mathbb{E}[Y_{j,n}]}{S_n} = \frac{\sum_{j=1}^n Y_{j,n} - \mathbb{E}[Y_{j,n}]}{\frac{S_n}{n}}.
+$$
+
+Substituting:
+$$
+= \frac{F_n\left(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}\right) - \left(u + t \frac{\sqrt{u(1-u)}}{\sqrt{n}} + O\left(\frac{1}{\sqrt{n}}\right)\right)}{\sqrt{\frac{u - u^2}{n} + O\left(\frac{1}{n^{3/2}}\right)}}.
+$$
+
+For the numerator:
+$$
+F_n(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}) - u - t \sqrt{\frac{u(1-u)}{n} + O\left(\frac{1}{n}\right)} > -t \sqrt{\frac{u(1-u)}{n} + O\left(\frac{1}{n^\frac{3}{2}}\right)}.
+$$
+
+Thus:
+$$
+F_n(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))}) > u + O\left(\frac{1}{\sqrt{n}}\right).
+$$
+
+We also have:
+$$
+Q_n(F_n(Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))})) > Q_n(u) + O\left(\frac{1}{\sqrt{n}}\right).
+$$
+
+Expanding further:
+$$
+Q(u) + t \frac{\sqrt{u(1-u)}}{\sqrt{n} f(Q(u))} > Q_n(u) + O\left(\frac{1}{\sqrt{n}}\right).
+$$
+
+Thus, we have:
+$$
+P\left(\sqrt{n} \frac{Q_n(u) - Q(u)}{f(Q(u)) / \sqrt{u(1-u)}} < t + O\left(\frac{1}{\sqrt{n}}\right)\right) \xrightarrow{n \to \infty} \Phi(t),
+$$
+where $\Phi$ is the CDF of $N(0,1)$.
+
+Finally, we get:
+$$
+P\left(\sqrt{n} \frac{Q_n(u) - Q(u)}{f(Q(u)) / \sqrt{u(1-u)}} < t\right) \xrightarrow{n \to \infty} \Phi(t),
+$$
+which terminates the proof.
+
+## Question 20 Behaviour of u -> 0 or 1 
+
+When $u \to 0$ or $1$, $Q(u) \to \infty$.
+
+We have:
+$$
+\frac{f(Q(u))}{\sqrt{u(1-u)}} \xrightarrow{u \to 0 \text{ or } 1} 0.
+$$
+
+In fact, we have:
+$$
+\frac{f(Q(u))}{\sqrt{u(1-u)}} = \frac{1}{Q'(u) \sqrt{u(1-u)}},
+$$
+because:
+
+By differentiating $F_X(Q(u)) = u$, we get:
+$$
+f_X(Q(u)) Q'(u) = 1.
+$$
+
+So we obtain:
+$$
+f_X(Q(u)) = \frac{1}{Q'(u)}.
+$$
+
+Thus, we rewrite it as:
+$$
+\frac{1}{\sqrt{u(1-u)} Q'(u)}.
+$$
+
+Since the numerator $\frac{1}{\sqrt{u(1-u)}}$ is integrable when $u \to 0$ or $1$, while $Q'(u)$ isn't integrable when $u \to 0$ or $1$, we conclude:
+$$
+\frac{1}{\sqrt{u(1-u)} Q'(u)} \xrightarrow{u \to 0 \text{ or } 1} 0.
+$$
+
+
+## Question 21 
+
+```{r}
+empirical_quantile<-function(u,Xn){
+  n <- length(Xn)
+  sorted_Xn<-sort(Xn)
+  ind<- ceiling(u*n) 
+  return(sorted_Xn[ind])
+}
+
+delta = 0.9
+n =1000
+result1 = stratified(n,delta)
+Xn = result1$res$X_sam
+U<-seq(0.01,0.99, length.out = 100)
+Qn<-sapply(U, function(u) empirical_quantile(u,Xn))
+
+plot(U,Qn, type="l", main="Empirical quantile vs Theoretical quantile",col="green")
+Q = sapply(U,function(u) inverse_F(u,a, mu_1, mu_2, s_1, s_2,eps=0.01))
+lines(U,Q,col="red")
+legend("topright", legend = c("Empirical quantile","Theoretical quantile"), col = c("green", "red"), lwd =2, cex= 0.7, bty="n")
+
+```
+
+## Question 22 
+
+```{r}
+
+#we denote eps the absolute precision of Qn(x) 
+IC_quantile<-function(u,eps_rel){
+  Q_u<-inverse_F(u,a, mu_1, mu_2, s_1, s_2,eps_rel*0.5)
+  eps = abs(Q_u*eps_rel)
+  #print(u)
+  #print(Q_u*eps_rel)
+  Q_u<-inverse_F(u,a, mu_1, mu_2, s_1, s_2,eps/4)
+  #print(Q_u)
+  eps = abs(Q_u*eps_rel*3/4)
+  
+  f_Q_u<-f(a,mu_1,mu_2,s_1,s_2,Q_u)
+  #print(u)
+  return(ceiling((q*q*f_Q_u*f_Q_u)/(eps^2*(u*(1-u)))))
+}
+
+U<-c(0.5,0.9, 0.99, 0.999, 0.9999)
+result<-sapply(U, function(u) IC_quantile(u,eps_rel =0.01))
+print(result)
+```
